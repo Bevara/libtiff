@@ -54,10 +54,27 @@ static GF_Err tiffdec_configure_pid(GF_Filter *filter, GF_FilterPid *pid, Bool i
 
 	if (!ctx->ofmt)
 	{
-		ctx->ofmt = GF_PIXEL_RGBA;
-		gf_filter_pid_set_property(ctx->opid, GF_PROP_PID_PIXFMT, &PROP_UINT(GF_PIXEL_RGBA));
+		ctx->ofmt = GF_PIXEL_RGB;
+		gf_filter_pid_set_property(ctx->opid, GF_PROP_PID_PIXFMT, &PROP_UINT(GF_PIXEL_RGB));
+	}
+	else
+	{
+		gf_filter_pid_set_property(ctx->opid, GF_PROP_PID_PIXFMT, &PROP_UINT(ctx->ofmt));
 	}
 
+	return GF_OK;
+}
+
+static GF_Err tiffdec_reconfigure_output(GF_Filter *filter, GF_FilterPid *pid)
+{
+	const GF_PropertyValue *p;
+	GF_TIFFDecCtx *ctx = gf_filter_get_udta(filter);
+	if (ctx->opid != pid)
+		return GF_BAD_PARAM;
+
+	p = gf_filter_pid_caps_query(pid, GF_PROP_PID_PIXFMT);
+	if (p)
+		ctx->ofmt = p->value.uint;
 	return GF_OK;
 }
 
@@ -108,32 +125,72 @@ static GF_Err tiffdec_process(GF_Filter *filter)
 		return GF_NON_COMPLIANT_BITSTREAM;
 	}
 
-	out_size = width * height * 4;
-
-	gf_filter_pid_set_property(ctx->opid, GF_PROP_PID_PIXFMT, &PROP_UINT(GF_PIXEL_RGBA));
-	gf_filter_pid_set_property(ctx->opid, GF_PROP_PID_WIDTH, &PROP_UINT(width));
-	gf_filter_pid_set_property(ctx->opid, GF_PROP_PID_HEIGHT, &PROP_UINT(height));
-
-	dst_pck = gf_filter_pck_new_alloc(ctx->opid, out_size, &output);
-	if (!dst_pck)
+	/* TIFFReadRGBAImageOriented only ever produces a packed R,G,B,A (little-endian uint32)
+	 * raster - decode into a temporary RGBA buffer, then narrow to RGB if that is what
+	 * was negotiated with the downstream filter (e.g. plain "out=rgb" with no encoder) */
 	{
-		TIFFClose(tif);
-		gf_filter_pid_drop_packet(ctx->ipid);
-		return GF_OUT_OF_MEM;
-	}
+		uint32_t *rgba = (uint32_t *)gf_malloc(sizeof(uint32_t) * width * height);
+		if (!rgba)
+		{
+			TIFFClose(tif);
+			gf_filter_pid_drop_packet(ctx->ipid);
+			return GF_OUT_OF_MEM;
+		}
 
-	/* TIFFReadRGBAImageOriented fills a packed R,G,B,A (little-endian uint32) raster,
-	 * bottom row last when orientation is TOPLEFT - matches GF_PIXEL_RGBA byte layout directly */
-	if (!TIFFReadRGBAImageOriented(tif, width, height, (uint32_t *)output, ORIENTATION_TOPLEFT, 0))
-	{
-		GF_LOG(GF_LOG_ERROR, GF_LOG_CODEC, ("[TIFF] TIFFReadRGBAImageOriented failed\n"));
-		gf_filter_pck_discard(dst_pck);
+		if (!TIFFReadRGBAImageOriented(tif, width, height, rgba, ORIENTATION_TOPLEFT, 0))
+		{
+			GF_LOG(GF_LOG_ERROR, GF_LOG_CODEC, ("[TIFF] TIFFReadRGBAImageOriented failed\n"));
+			gf_free(rgba);
+			TIFFClose(tif);
+			gf_filter_pid_drop_packet(ctx->ipid);
+			return GF_NON_COMPLIANT_BITSTREAM;
+		}
 		TIFFClose(tif);
-		gf_filter_pid_drop_packet(ctx->ipid);
-		return GF_NON_COMPLIANT_BITSTREAM;
-	}
 
-	TIFFClose(tif);
+		if (ctx->ofmt == GF_PIXEL_RGB)
+		{
+			u32 i;
+			const u8 *src = (const u8 *)rgba;
+			out_size = width * height * 3;
+
+			gf_filter_pid_set_property(ctx->opid, GF_PROP_PID_PIXFMT, &PROP_UINT(GF_PIXEL_RGB));
+			gf_filter_pid_set_property(ctx->opid, GF_PROP_PID_WIDTH, &PROP_UINT(width));
+			gf_filter_pid_set_property(ctx->opid, GF_PROP_PID_HEIGHT, &PROP_UINT(height));
+
+			dst_pck = gf_filter_pck_new_alloc(ctx->opid, out_size, &output);
+			if (!dst_pck)
+			{
+				gf_free(rgba);
+				gf_filter_pid_drop_packet(ctx->ipid);
+				return GF_OUT_OF_MEM;
+			}
+			for (i = 0; i < (u32)(width * height); i++)
+			{
+				output[i * 3] = src[i * 4];
+				output[i * 3 + 1] = src[i * 4 + 1];
+				output[i * 3 + 2] = src[i * 4 + 2];
+			}
+		}
+		else
+		{
+			out_size = width * height * 4;
+
+			gf_filter_pid_set_property(ctx->opid, GF_PROP_PID_PIXFMT, &PROP_UINT(GF_PIXEL_RGBA));
+			gf_filter_pid_set_property(ctx->opid, GF_PROP_PID_WIDTH, &PROP_UINT(width));
+			gf_filter_pid_set_property(ctx->opid, GF_PROP_PID_HEIGHT, &PROP_UINT(height));
+
+			dst_pck = gf_filter_pck_new_alloc(ctx->opid, out_size, &output);
+			if (!dst_pck)
+			{
+				gf_free(rgba);
+				gf_filter_pid_drop_packet(ctx->ipid);
+				return GF_OUT_OF_MEM;
+			}
+			memcpy(output, rgba, out_size);
+		}
+
+		gf_free(rgba);
+	}
 
 	gf_filter_pck_merge_properties(pck, dst_pck);
 	gf_filter_pck_set_dependency_flags(dst_pck, 0);
@@ -160,6 +217,7 @@ GF_FilterRegister TIFFDecoderRegister = {
 			.private_size = sizeof(GF_TIFFDecCtx),
 	SETCAPS(TIFFDecCaps),
 	.configure_pid = tiffdec_configure_pid,
+	.reconfigure_output = tiffdec_reconfigure_output,
 	.process = tiffdec_process,
 };
 
