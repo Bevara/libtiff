@@ -1,0 +1,19 @@
+{
+    "name": "libtiff",
+    "description": "TIFF image decoder",
+    "filters":["tiffdec","rftiff"],
+    "help": "This filter decodes TIFF images using libtiff.",
+    "support": [
+        "image"
+    ],
+    "sources":"https://bevara.ddns.net/sources/libtiff.accessor",
+    "filter_source":{
+        "tiffdec" : "dec_tiff.c",
+        "rftiff" : "reframe_tiff.c"
+    },
+    "extension":{
+      "tif" : "img",
+      "tiff" : "img"
+    },
+    "licence_required":false
+}
