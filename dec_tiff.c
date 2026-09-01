@@ -221,7 +221,7 @@ GF_FilterRegister TIFFDecoderRegister = {
 	.process = tiffdec_process,
 };
 
-const GF_FilterRegister * EMSCRIPTEN_KEEPALIVE dynCall_tiffdec_register(GF_FilterSession *session)
+const GF_FilterRegister * EMSCRIPTEN_KEEPALIVE tiffdec_register(GF_FilterSession *session)
 {
 	return &TIFFDecoderRegister;
 }
@@ -230,5 +230,5 @@ const GF_FilterRegister * EMSCRIPTEN_KEEPALIVE dynCall_tiffdec_register(GF_Filte
 #include "filter_register.h"
 __attribute__((constructor))
 void register_tiffdec(void) {
-    gf_filter_auto_register("tiffdec", dynCall_tiffdec_register);
+    gf_filter_auto_register("tiffdec", tiffdec_register);
 }

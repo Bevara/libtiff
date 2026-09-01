@@ -210,7 +210,7 @@ GF_FilterRegister ReframeTiffRegister = {
 	.process = rftiff_process,
 	.process_event = rftiff_process_event};
 
-const GF_FilterRegister * EMSCRIPTEN_KEEPALIVE dynCall_tiff_reframe_register(GF_FilterSession *session)
+const GF_FilterRegister * EMSCRIPTEN_KEEPALIVE tiff_reframe_register(GF_FilterSession *session)
 {
 	return &ReframeTiffRegister;
 }
@@ -219,5 +219,5 @@ const GF_FilterRegister * EMSCRIPTEN_KEEPALIVE dynCall_tiff_reframe_register(GF_
 #include "filter_register.h"
 __attribute__((constructor))
 void register_tiff_reframe(void) {
-    gf_filter_auto_register("tiff_reframe", dynCall_tiff_reframe_register);
+    gf_filter_auto_register("tiff_reframe", tiff_reframe_register);
 }
