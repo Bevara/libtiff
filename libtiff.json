@@ -1,5 +1,6 @@
 {
     "name": "libtiff",
+    "version": "1.0.1",
     "description": "TIFF image decoder",
     "filters":["tiffdec","rftiff"],
     "help": "This filter decodes TIFF images using libtiff.",
