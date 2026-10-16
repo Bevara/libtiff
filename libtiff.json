@@ -15,7 +15,6 @@
       "tif" : "img",
       "tiff" : "img"
     },
-    "licence_required":false,
     "using": ["solver_minimal_1", "solver_1"],
     "runtime": {
         "tiffdec": {
@@ -28,5 +27,10 @@
                 }
             ]
         }
+    },
+    "patents": {
+        "status": "expired",
+        "note": "TIFF (LZW), 2004",
+        "checked": "2026-10-16"
     }
 }
