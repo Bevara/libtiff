@@ -1,6 +1,6 @@
 {
     "name": "libtiff",
-    "version": "1.0.1",
+    "version": "1.0.2",
     "description": "TIFF image decoder",
     "filters":["tiffdec","rftiff"],
     "help": "This filter decodes TIFF images using libtiff.",
@@ -16,7 +16,7 @@
       "tif" : "img",
       "tiff" : "img"
     },
-    "using": ["solver_minimal_1", "solver_1"],
+    "using": ["mm_solver_minimal_1.0.1", "mm_solver_1.0.1"],
     "runtime": {
         "tiffdec": {
             "outputs": [
