@@ -2,21 +2,31 @@
     "name": "libtiff",
     "version": "1.0.2",
     "description": "TIFF image decoder",
-    "filters":["tiffdec","rftiff"],
+    "filters": [
+        "tiffdec",
+        "rftiff"
+    ],
     "help": "This filter decodes TIFF images using libtiff.",
     "support": [
         "image"
     ],
-    "sources":"https://bevara.ddns.net/sources/libtiff.accessor",
-    "filter_source":{
-        "tiffdec" : "dec_tiff.c",
-        "rftiff" : "reframe_tiff.c"
+    "sources": "https://bevara.ddns.net/sources/libtiff.accessor",
+    "filter_source": {
+        "tiffdec": "dec_tiff.c",
+        "rftiff": "reframe_tiff.c"
     },
-    "extension":{
-      "tif" : "img",
-      "tiff" : "img"
+    "extension": {
+        "tif": "img",
+        "tiff": "img"
     },
-    "using": ["mm_solver_minimal_1.0.1", "mm_solver_1.0.1", "mm_solver_1.0.2", "mm_solver_1.0.3", "mm_solver_1.0.4"],
+    "using": [
+        "mm_solver_minimal_1.0.1",
+        "mm_solver_1.0.1",
+        "mm_solver_1.0.2",
+        "mm_solver_1.0.3",
+        "mm_solver_1.0.4",
+        "mm_solver_1.0.5"
+    ],
     "runtime": {
         "tiffdec": {
             "outputs": [
